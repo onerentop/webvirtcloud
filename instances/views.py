@@ -2094,6 +2094,53 @@ def server_delete(request):
                     "images": _fetch_images(), "stats": _vm_stats(vms)})
 
 
+def _fetch_ports():
+    """从宿主 API 拉取自定义端口映射与端口池"""
+    try:
+        req = _urlreq.Request(_VM_API + "/ports", headers={"X-Auth": _VM_API_SECRET})
+        with _urlreq.urlopen(req, timeout=10) as r:
+            d = _json.loads(r.read())
+            return d.get("ports", []), d.get("pool", [23000, 23199])
+    except Exception:
+        return [], [23000, 23199]
+
+
+def server_ports(request):
+    """自定义端口映射管理"""
+    msg, ok = None, False
+    if request.method == "POST":
+        op = request.POST.get("op", "")
+        if op == "add":
+            payload = _json.dumps({
+                "vm": request.POST.get("vm", "").strip(),
+                "guest_port": request.POST.get("guest_port", "").strip(),
+                "public_port": request.POST.get("public_port", "").strip(),
+                "proto": request.POST.get("proto", "tcp"),
+                "note": request.POST.get("note", "").strip(),
+            }).encode()
+            url = _VM_API + "/ports/add"
+        elif op == "del":
+            payload = _json.dumps({"public_port": request.POST.get("public_port", "").strip()}).encode()
+            url = _VM_API + "/ports/del"
+        else:
+            payload, url = None, None
+        if url:
+            req = _urlreq.Request(url, data=payload,
+                                  headers={"Content-Type": "application/json",
+                                           "X-Auth": _VM_API_SECRET})
+            try:
+                with _urlreq.urlopen(req, timeout=60) as r:
+                    res = _json.loads(r.read())
+                ok = bool(res.get("ok"))
+                msg = res.get("output") or res.get("error") or ("操作成功" if ok else "操作失败")
+            except Exception as e:
+                msg = str(e)
+    ports, pool = _fetch_ports()
+    return render(request, "instances/server_ports.html",
+                  {"result": ({"ok": ok, "msg": msg} if msg else None),
+                   "ports": ports, "pool": pool, "vms": _fetch_vms()})
+
+
 def _fetch_images():
     """从宿主 API 拉取可用的系统镜像清单"""
     try:

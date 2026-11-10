@@ -9,6 +9,7 @@ urlpatterns = [
     path("server-create/", views.server_create, name="server_create"),
     path("server-reset-password/", views.server_reset_password, name="server_reset_password"),
     path("server-delete/", views.server_delete, name="server_delete"),
+    path("server-ports/", views.server_ports, name="server_ports"),
     path("flavor/create/", views.flavor_create, name="flavor_create"),
     path("flavor/<int:pk>/update/", views.flavor_update, name="flavor_update"),
     path("flavor/<int:pk>/delete/", views.flavor_delete, name="flavor_delete"),

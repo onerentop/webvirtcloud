@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}端口映射{% endblock %}
+{% block page_heading %}端口映射{% endblock %}
+
+{% block content %}
+<div class="kvm">
+
+  {% if result %}
+  <div class="notice {% if result.ok %}notice-ok{% else %}notice-err{% endif %}">
+    <strong>{{ result.msg }}</strong>
+  </div>
+  {% endif %}
+
+  <div class="create">
+    <form method="post" class="create-form">
+      {% csrf_token %}
+      <input type="hidden" name="op" value="add">
+
+      <div class="frow">
+        <label for="p-vm">虚拟机</label>
+        <select id="p-vm" name="vm" class="form-select" required>
+          {% for v in vms %}
+            <option value="{{ v.name }}">{{ v.name }}（{{ v.ip }}）</option>
+          {% empty %}
+            <option value="">（还没有虚拟机）</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="frow">
+        <label for="p-guest">端口</label>
+        <div class="triple">
+          <div><input type="number" class="form-control" id="p-guest" name="guest_port"
+                      min="1" max="65535" required placeholder="内网端口"></div>
+          <div>
+            <select class="form-select" name="proto">
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+            </select>
+          </div>
+          <div><input type="number" class="form-control" name="public_port"
+                      min="{{ pool.0 }}" max="{{ pool.1 }}" placeholder="自动分配"></div>
+        </div>
+        <p class="hint">第三个框留空就自动分配（公网端口池 {{ pool.0 }}–{{ pool.1 }}）</p>
+      </div>
+
+      <div class="frow">
+        <label for="p-note">备注</label>
+        <input type="text" class="form-control" id="p-note" name="note"
+               placeholder="可选，比如 minecraft、DNS、游戏服">
+      </div>
+
+      <div class="frow">
+        <label></label>
+        <div>
+          <button type="submit" class="btn-create" style="width:auto;padding:9px 22px">添加映射</button>
+        </div>
+      </div>
+    </form>
+
+    <aside class="summary">
+      <p class="summary-label">当前</p>
+      <p class="summary-main">{{ ports|length }} 条映射</p>
+      <p class="summary-sub">公网端口池 {{ pool.0 }}–{{ pool.1 }}</p>
+      <ul class="summary-meta">
+        <li><span>已用</span><b>{{ ports|length }} / 200</b></li>
+        <li><span>访问格式</span><b>公网IP:端口</b></li>
+        <li><span>生效</span><b>添加后立即</b></li>
+        <li><span>内网互访</span><b>192.168.122.x 直连</b></li>
+      </ul>
+      <p class="form-text">映射直接把公网端口转发到虚拟机内网端口，不经过面板。</p>
+      <p class="form-text">同一台宿主机上的机器之间可以直接用内网 IP 互访，流量不出宿主机，不需要走公网，也不需要额外映射。</p>
+    </aside>
+  </div>
+
+  <section class="machines">
+    <header class="machines-head">
+      <h2>映射列表 <span class="count">共 {{ ports|length }} 条</span></h2>
+    </header>
+    <table class="machine-table">
+      <thead>
+        <tr>
+          <th style="width:110px">公网端口</th>
+          <th>虚拟机</th>
+          <th>转发到</th>
+          <th style="width:70px">协议</th>
+          <th>备注</th>
+          <th style="width:170px">创建时间</th>
+          <th style="width:80px"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in ports %}
+        <tr>
+          <td class="mono cell-name">{{ p.public_port }}</td>
+          <td>{{ p.vm }}</td>
+          <td class="mono">{{ p.ip }}:{{ p.guest_port }}</td>
+          <td>{{ p.proto|upper }}</td>
+          <td>{% if p.note %}{{ p.note }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="mono" style="font-size:12px">{{ p.created }}</td>
+          <td>
+            <form method="post" style="margin:0">
+              {% csrf_token %}
+              <input type="hidden" name="op" value="del">
+              <input type="hidden" name="public_port" value="{{ p.public_port }}">
+              <button type="submit" class="btn-del"
+                      onclick="return confirm('删除公网端口 {{ p.public_port }} 的映射？')">删除</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">还没有自定义端口映射。在左边填一个端口就能加。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+</div>
+{% endblock %}
