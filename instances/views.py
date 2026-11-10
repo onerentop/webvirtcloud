@@ -2010,13 +2010,14 @@ def server_create(request):
         if oct_.isdigit():
             v["oct"] = oct_
             v["http"] = f"http://vm{oct_}.vm.topren.top"
+            v["https"] = f"https://vm{oct_}.vm.topren.top:9443"
             v["ssh"] = f"ssh -p {21000 + int(oct_)} root@103.42.183.217"
         else:
             v["oct"] = v["http"] = v["ssh"] = ""
 
     return render(request, "instances/server_create.html",
                   {"result": result, "vms": vms, "suggest_name": _suggest_name(vms),
-                   "images": _fetch_images()})
+                   "images": _fetch_images(), "stats": _vm_stats(vms)})
 
 
 def server_reset_password(request):
@@ -2043,7 +2044,14 @@ def server_reset_password(request):
                   {"result": {"ok": ok, "name": request.POST.get("name", ""),
                               "reset_msg": msg, "is_reset": True},
                    "vms": vms, "suggest_name": _suggest_name(vms),
-                    "images": _fetch_images()})
+                    "images": _fetch_images(), "stats": _vm_stats(vms)})
+
+
+def _vm_stats(vms):
+    """统计运行/关闭数量，供页面标题展示"""
+    running = sum(1 for v in vms
+                  if "运行" in str(v.get("state", "")) or "run" in str(v.get("state", "")).lower())
+    return {"total": len(vms), "running": running, "stopped": len(vms) - running}
 
 
 def _suggest_name(vms):
@@ -2083,7 +2091,7 @@ def server_delete(request):
                   {"result": {"ok": bool(deleted) and not failed, "deleted": deleted,
                               "failed": failed, "delete_msg": msg, "is_delete": True},
                    "vms": vms, "suggest_name": _suggest_name(vms),
-                    "images": _fetch_images()})
+                    "images": _fetch_images(), "stats": _vm_stats(vms)})
 
 
 def _fetch_images():
@@ -2108,6 +2116,7 @@ def _fetch_vms():
         if oct_.isdigit():
             v["oct"] = oct_
             v["http"] = f"http://vm{oct_}.vm.topren.top"
+            v["https"] = f"https://vm{oct_}.vm.topren.top:9443"
             v["ssh"] = f"ssh -p {21000 + int(oct_)} root@103.42.183.217"
         else:
             v["oct"] = v["http"] = v["ssh"] = ""

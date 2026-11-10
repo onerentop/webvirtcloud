@@ -1,224 +1,277 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}一键建机{% endblock %}
+
+{% block title %}建机{% endblock %}
+{% block page_heading %}建机{% endblock %}
+
 {% block content %}
-<div class="container-fluid px-4">
-  <h3 class="mt-3 mb-3">一键建机</h3>
+<div class="kvm">
+
   {% if result.is_delete %}
-    <div class="alert alert-{% if result.ok %}success{% else %}warning{% endif %}">
-      <strong>{{ result.delete_msg }}</strong>
-      {% if result.deleted %}<div>已删除：{{ result.deleted|join:"、" }}</div>{% endif %}
-      {% if result.failed %}
-        <div>失败：{% for k, v in result.failed.items %}{{ k }}（{{ v }}）{% if not forloop.last %}；{% endif %}{% endfor %}</div>
-      {% endif %}
-    </div>
-  {% endif %}
-  <p class="text-muted">从黄金镜像创建，约 6 秒可用。自动分配 IP / 域名 / 端口 / 密码。</p>
-
-  {% if result and not result.is_delete %}
-    {% if result.is_reset %}
-      <div class="alert {% if result.ok %}alert-success{% else %}alert-danger{% endif %}">
-        <strong>{% if result.ok %}✅{% else %}❌{% endif %} 重置 {{ result.name }} 的密码：</strong>
-        <code>{{ result.reset_msg }}</code>
-      </div>
-    {% elif result.ok %}
-      <div class="alert alert-success">
-        <h5>✅ 创建成功：{{ result.name }}</h5>
-        <table class="table table-sm mb-0">
-          <tr><td style="width:90px">内网 IP</td><td><code>{{ result.ip }}</code></td></tr>
-          <tr><td>HTTP</td><td><a href="{{ result.http }}" target="_blank">{{ result.http }}</a></td></tr>
-          <tr><td>HTTPS</td><td><a href="{{ result.https }}" target="_blank">{{ result.https }}</a></td></tr>
-          <tr><td>SSH</td><td><code>{{ result.ssh }}</code></td></tr>
-          <tr><td>密码</td><td><code>自动生成的随机密码（见下方列表，可复制或重置）</code></td></tr>
-        </table>
-      </div>
-    {% else %}
-      <div class="alert alert-danger">
-        <strong>创建失败</strong>
-        <pre class="mb-0 mt-2" style="max-height:240px;overflow:auto">{{ result.error }}{{ result.output }}</pre>
-      </div>
+  <div class="notice notice-{% if result.ok %}ok{% else %}warn{% endif %}">
+    <strong>{{ result.delete_msg }}</strong>
+    {% if result.deleted %}<div class="notice-line">已删除：{{ result.deleted|join:"、" }}</div>{% endif %}
+    {% if result.failed %}
+      <div class="notice-line">失败：{% for k, v in result.failed.items %}{{ k }}（{{ v }}）{% if not forloop.last %}；{% endif %}{% endfor %}</div>
     {% endif %}
+  </div>
   {% endif %}
 
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="post" action="{% url 'instances:server_create' %}">
-        {% csrf_token %}
-        <div class="row g-3 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">机器名称</label>
-            <div class="input-group">
-              <input type="text" class="form-control" name="name" id="vm-name" required
-                     pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,30}" placeholder="自动生成"
-                     value="{{ suggest_name }}">
-              <button class="btn btn-outline-secondary" type="button" onclick="genVmName()"
-                      title="重新生成一个名字">↻</button>
-            </div>
-            <div class="form-text">已自动填好，可直接改</div>
-          </div>
-          <div class="col-md-4">
-            <label class="form-label">系统镜像</label>
-            <select class="form-select" name="image" id="vm-image">
-              {% for img in images %}
-                <option value="{{ img.id }}" title="{{ img.note }}">{{ img.label }}</option>
-              {% empty %}
-                <option value="debian12-golden">Debian 12 (预定制模板)</option>
-              {% endfor %}
-            </select>
-            <div class="form-text" id="image-note"></div>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">CPU 核数</label>
-            <input type="number" class="form-control" name="cpus" value="2" min="1" max="12">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">内存 (MB)</label>
-            <input type="number" class="form-control" name="mem" value="2048" min="512" max="8192" step="512">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">磁盘 (GB)</label>
-            <input type="number" class="form-control" name="disk" value="20" min="10" max="200">
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">root 密码</label>
-            <input type="text" class="form-control" name="password" value="" placeholder="留空 = 自动生成 16 位随机密码">
-          </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-success w-100">创建</button>
-          </div>
+  {% if result.is_reset %}
+  <div class="notice {% if result.ok %}notice-ok{% else %}notice-err{% endif %}">
+    <strong>{% if result.ok %}{{ result.name }} 的密码已更新{% else %}重置 {{ result.name }} 的密码失败{% endif %}</strong>
+    {% if result.reset_msg %}<div class="notice-line"><code>{{ result.reset_msg }}</code></div>{% endif %}
+  </div>
+  {% endif %}
+
+  {% if result.ok and not result.is_delete and not result.is_reset %}
+  <div class="notice notice-ok">
+    <strong>{{ result.name }} 已创建</strong>
+    <dl class="result-grid">
+      <div><dt>内网 IP</dt><dd class="mono">{{ result.ip }}</dd></div>
+      <div><dt>HTTP</dt><dd>{% if result.http %}<a href="{{ result.http }}" target="_blank" rel="noopener">{{ result.http }}</a>{% endif %}</dd></div>
+      <div><dt>HTTPS</dt><dd>{% if result.https %}<a href="{{ result.https }}" target="_blank" rel="noopener">{{ result.https }}</a>{% endif %}</dd></div>
+      <div><dt>SSH</dt><dd class="mono">{{ result.ssh }}</dd></div>
+    </dl>
+    <div class="notice-line">root 密码见下方列表，点右侧按钮复制；忘记也可以在那里重设。</div>
+  </div>
+  {% endif %}
+
+  <div class="create">
+    <form id="create-form" method="post" action="{% url 'instances:server_create' %}" class="create-form">
+      {% csrf_token %}
+
+      <div class="frow">
+        <label for="vm-name">名称</label>
+        <div class="input-join">
+          <input type="text" id="vm-name" name="name" required
+                 pattern="[a-zA-Z0-9][a-zA-Z0-9_-]{0,30}" placeholder="自动生成"
+                 value="{{ suggest_name }}" autocomplete="off">
+          <button type="button" onclick="genVmName()" title="换一个名字">↻</button>
         </div>
-      </form>
-    </div>
+      </div>
+
+      <div class="frow">
+        <label for="vm-image">系统</label>
+        <div>
+          <select id="vm-image" name="image" class="form-select">
+            {% for img in images %}
+              <option value="{{ img.id }}" data-note="{{ img.note }}">{{ img.label }}</option>
+            {% empty %}
+              <option value="debian12-golden" data-note="预定制模板">Debian 12 (预定制模板)</option>
+            {% endfor %}
+          </select>
+          <p class="hint" id="image-note"></p>
+        </div>
+      </div>
+
+      <div class="frow">
+        <label>规格</label>
+        <div class="triple">
+          <div><input type="number" class="form-control" id="f-cpus" name="cpus" value="2" min="1" max="12"><span>核</span></div>
+          <div><input type="number" class="form-control" id="f-mem" name="mem" value="2048" min="512" max="8192" step="512"><span>MB</span></div>
+          <div><input type="number" class="form-control" id="f-disk" name="disk" value="20" min="10" max="200"><span>GB</span></div>
+        </div>
+      </div>
+
+      <div class="frow">
+        <label for="f-pass">密码</label>
+        <input type="text" class="form-control" id="f-pass" name="password" value=""
+               placeholder="留空则自动生成 16 位随机密码" autocomplete="new-password">
+      </div>
+    </form>
+
+    <aside class="summary">
+      <p class="summary-label">将创建</p>
+      <p class="summary-main" id="sum-spec">2 核 · 2048 MB · 20 GB</p>
+      <p class="summary-sub" id="sum-image"></p>
+      <ul class="summary-meta">
+        <li><span>系统盘</span><b id="sum-disk">20 GB</b></li>
+        <li><span>网络</span><b>自动分配 IP 与端口</b></li>
+        <li><span>密码</span><b id="sum-pass">随机 16 位</b></li>
+      </ul>
+      <button type="submit" form="create-form" class="btn-create">创建机器</button>
+    </aside>
   </div>
 
-  <div class="d-flex justify-content-between align-items-center mb-1">
-    <h5 class="mb-0">当前虚拟机</h5>
-    <div class="d-flex gap-2 align-items-center">
-      <span class="text-muted small" id="sel-count">未选择</span>
-      <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteSelected()">
-        🗑 删除选中
-      </button>
-    </div>
-  </div>
-  <table class="table table-sm table-hover">
-    <thead><tr><th style="width:34px"><input type="checkbox" id="check-all" onclick="toggleAll(this)" title="全选"></th><th>名称</th><th>内网 IP</th><th>状态</th><th>HTTP</th><th>SSH</th><th style="width:140px">root 密码</th><th style="width:280px">重置密码</th></tr></thead>
-    <tbody>
-    {% for v in vms %}
-      <tr>
-        <td><input type="checkbox" class="row-check" value="{{ v.name }}" onclick="updateSelCount()"></td>
-        <td>{{ v.name }}</td>
-        <td><code>{{ v.ip }}</code></td>
-        <td>{{ v.state }}</td>
-        <td>{% if v.http %}<a href="{{ v.http }}" target="_blank">{{ v.http }}</a>{% endif %}</td>
-        <td><code>{{ v.ssh }}</code></td>
-        <td>
-          {% if v.password %}
-            <code id="pwd-{{ v.name }}">{{ v.password }}</code>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 ms-1"
-                    onclick="copyPwd('{{ v.name }}')" title="复制">📋</button>
-          {% else %}
-            <span class="text-muted">未记录</span>
-          {% endif %}
-        </td>
-        <td>
-          <form method="post" action="{% url 'instances:server_reset_password' %}" class="d-flex gap-1">
-            {% csrf_token %}
-            <input type="hidden" name="name" value="{{ v.name }}">
-            <input type="text" class="form-control form-control-sm" name="password"
-                   placeholder="新密码" required minlength="6">
-            <button type="submit" class="btn btn-sm btn-outline-warning text-nowrap">重置</button>
-          </form>
-        </td>
-      </tr>
-    {% empty %}
-      <tr><td colspan="8" class="text-muted">暂无虚拟机</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <section class="machines">
+    <header class="machines-head">
+      <h2>机器 <span class="count">{% if stats and stats.total %}{{ stats.total }} 台 · {% if stats.stopped %}{{ stats.running }} 台运行 · {{ stats.stopped }} 台关闭{% else %}全部运行{% endif %}{% else %}暂无{% endif %}</span></h2>
+      <div class="machines-actions">
+        <span id="sel-count" class="sel-hint">未选择</span>
+        <button type="button" class="btn-del" onclick="deleteSelected()">删除选中</button>
+      </div>
+    </header>
+
+    <table class="machine-table">
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox" id="check-all" onclick="toggleAll(this)" title="全选"></th>
+          <th>名称</th>
+          <th style="width:88px">状态</th>
+          <th>内网 IP</th>
+          <th>HTTPS</th>
+          <th>SSH</th>
+          <th>root 密码</th>
+          <th class="col-reset">重设密码</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in vms %}
+        <tr>
+          <td><input type="checkbox" class="row-check" value="{{ v.name }}" onclick="updateSelCount()"></td>
+          <td class="cell-name">{{ v.name }}</td>
+          <td>
+            {% if "运行" in v.state or "run" in v.state %}
+              <span class="dot dot-ok"></span>运行
+            {% else %}
+              <span class="dot dot-off"></span>{{ v.state }}
+            {% endif %}
+          </td>
+          <td class="mono">{{ v.ip }}</td>
+          <td>{% if v.https %}<a href="{{ v.https }}" target="_blank" rel="noopener" class="mono">vm{{ v.oct }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td class="mono">{% if v.ssh %}<span title="{{ v.ssh }}">-p&nbsp;{{ v.ssh|slice:"7:12" }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td>
+            {% if v.password %}
+              <code id="pwd-{{ v.name }}">{{ v.password }}</code>
+              <button type="button" class="copy-btn" onclick="copyPwd('{{ v.name }}')" title="复制密码">⧉</button>
+            {% else %}
+              <span class="muted">未记录</span>
+            {% endif %}
+          </td>
+          <td class="col-reset">
+            <form method="post" action="{% url 'instances:server_reset_password' %}" class="reset-form">
+              {% csrf_token %}
+              <input type="hidden" name="name" value="{{ v.name }}">
+              <input type="text" name="password" placeholder="新密码" required minlength="6" autocomplete="new-password">
+              <button type="submit">设置</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="empty">还没有机器。在上面填个名字，点右边的「创建机器」。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
 </div>
 
 <script>
-function copyPwd(name) {
-  const el = document.getElementById('pwd-' + name);
-  if (!el) return;
-  const text = el.innerText.trim();
-  const done = () => {
-    const b = event.target;
-    const old = b.innerText;
-    b.innerText = '✓';
-    b.classList.add('btn-success');
-    setTimeout(() => { b.innerText = old; b.classList.remove('btn-success'); }, 1200);
-  };
-  if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
-  } else {
-    fallbackCopy(text, done);
-  }
-}
-function fallbackCopy(text, cb) {
-  const ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.position = 'fixed';
-  ta.style.opacity = '0';
-  document.body.appendChild(ta);
-  ta.select();
-  try { document.execCommand('copy'); if (cb) cb(); } catch(e) { alert('复制失败，请手动选择: ' + text); }
-  document.body.removeChild(ta);
-}
-function genVmName() {
-  const hex = Math.floor(Math.random() * 65536).toString(16).padStart(4, '0');
-  const el = document.getElementById('vm-name');
-  if (el) { el.value = 'vm-' + hex; }
-}
-function toggleAll(el) {
-  document.querySelectorAll('.row-check').forEach(c => { c.checked = el.checked; });
-  updateSelCount();
-}
-function updateSelCount() {
-  const n = document.querySelectorAll('.row-check:checked').length;
-  const el = document.getElementById('sel-count');
-  if (el) { el.textContent = n ? ('已选 ' + n + ' 台') : '未选择'; }
-}
-function deleteSelected() {
-  const boxes = [...document.querySelectorAll('.row-check:checked')];
-  const names = boxes.map(c => c.value);
-  if (!names.length) { alert('请先勾选要删除的机器'); return; }
-  const running = boxes.filter(c => {
-    const tr = c.closest('tr');
-    return tr && tr.cells[3] && /运行/.test(tr.cells[3].textContent);
-  }).map(c => c.value);
-  let msg = '确定删除以下 ' + names.length + ' 台机器？\n\n' + names.join('\n');
-  if (running.length) { msg += '\n\n其中正在运行（会被强制关机）：' + running.join('、'); }
-  msg += '\n\n磁盘和密码记录会一并删除，不可恢复。';
-  if (!confirm(msg)) { return; }
-  const f = document.createElement('form');
-  f.method = 'post';
-  f.action = '{% url "instances:server_delete" %}';
-  const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
-  if (csrf) {
-    const i = document.createElement('input');
-    i.type = 'hidden'; i.name = 'csrfmiddlewaretoken'; i.value = csrf.value;
-    f.appendChild(i);
-  }
-  names.forEach(n => {
-    const i = document.createElement('input');
-    i.type = 'hidden'; i.name = 'names'; i.value = n;
-    f.appendChild(i);
-  });
-  document.body.appendChild(f);
-  f.submit();
-}
+(function () {
+  const $ = id => document.getElementById(id);
 
-function updateImageNote() {
-  const sel = document.getElementById('vm-image');
-  const el = document.getElementById('image-note');
-  if (!sel || !el) return;
-  const opt = sel.options[sel.selectedIndex];
-  el.textContent = opt ? (opt.getAttribute('title') || '') : '';
-}
-document.addEventListener('DOMContentLoaded', function () {
-  const sel = document.getElementById('vm-image');
-  if (sel) { sel.addEventListener('change', updateImageNote); updateImageNote(); }
-});
+  // ── 实时规格汇总 ──
+  function updateSummary() {
+    const cpus = ($('f-cpus').value || '2');
+    const mem  = ($('f-mem').value || '2048');
+    const disk = ($('f-disk').value || '20');
+    const pass = ($('f-pass').value || '').trim();
+    const sel  = $('vm-image');
+    const opt  = sel ? sel.options[sel.selectedIndex] : null;
+    $('sum-spec').textContent  = cpus + ' 核 · ' + mem + ' MB · ' + disk + ' GB';
+    $('sum-image').textContent = opt ? opt.text : '';
+    $('sum-disk').textContent  = disk + ' GB';
+    $('sum-pass').textContent  = pass ? '自定义' : '随机 16 位';
+  }
+
+  function updateImageNote() {
+    const sel = $('vm-image'), el = $('image-note');
+    if (!sel || !el) return;
+    const opt = sel.options[sel.selectedIndex];
+    el.textContent = opt ? (opt.getAttribute('data-note') || '') : '';
+  }
+
+  // ── 名字生成 ──
+  window.genVmName = function () {
+    const hex = Math.floor(Math.random() * 65536).toString(16).padStart(4, '0');
+    const el = $('vm-name');
+    if (el) el.value = 'vm-' + hex;
+  };
+
+  // ── 多选 ──
+  window.toggleAll = function (el) {
+    document.querySelectorAll('.row-check').forEach(c => { c.checked = el.checked; });
+    window.updateSelCount();
+  };
+  window.updateSelCount = function () {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    const el = $('sel-count');
+    if (el) el.textContent = n ? ('已选 ' + n + ' 台') : '未选择';
+  };
+  window.deleteSelected = function () {
+    const boxes = [...document.querySelectorAll('.row-check:checked')];
+    const names = boxes.map(c => c.value);
+    if (!names.length) { alert('请先勾选要删除的机器'); return; }
+    const running = boxes.filter(c => {
+      const tr = c.closest('tr');
+      return tr && /运行|run/i.test(tr.cells[2].textContent);
+    }).map(c => c.value);
+    let msg = '确定删除 ' + names.length + ' 台机器？\n\n' + names.join('\n');
+    if (running.length) msg += '\n\n正在运行（会被强制关机）：' + running.join('、');
+    msg += '\n\n磁盘和密码记录会一并删除，不可恢复。';
+    if (!confirm(msg)) return;
+    const f = document.createElement('form');
+    f.method = 'post';
+    f.action = '{% url "instances:server_delete" %}';
+    const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (csrf) {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = 'csrfmiddlewaretoken'; i.value = csrf.value;
+      f.appendChild(i);
+    }
+    names.forEach(n => {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = 'names'; i.value = n;
+      f.appendChild(i);
+    });
+    document.body.appendChild(f);
+    f.submit();
+  };
+
+  // ── 复制密码 ──
+  window.copyPwd = function (name) {
+    const el = $('pwd-' + name);
+    if (!el) return;
+    const text = el.textContent.trim();
+    const done = (btn) => {
+      if (!btn) return;
+      const old = btn.textContent;
+      btn.textContent = '✓';
+      btn.style.color = 'var(--ok)';
+      setTimeout(() => { btn.textContent = old; btn.style.color = ''; }, 1200);
+    };
+    const btn = event && event.target;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(() => done(btn)).catch(() => fallbackCopy(text, () => done(btn)));
+    } else {
+      fallbackCopy(text, () => done(btn));
+    }
+  };
+  function fallbackCopy(text, cb) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); if (cb) cb(); }
+    catch (e) { alert('复制失败，请手动选择：' + text); }
+    document.body.removeChild(ta);
+  }
+
+  // ── 绑定 ──
+  document.addEventListener('DOMContentLoaded', function () {
+    ['f-cpus', 'f-mem', 'f-disk', 'f-pass'].forEach(id => {
+      const el = $(id);
+      if (el) el.addEventListener('input', updateSummary);
+    });
+    const sel = $('vm-image');
+    if (sel) {
+      sel.addEventListener('change', function () { updateImageNote(); updateSummary(); });
+      updateImageNote();
+    }
+    updateSummary();
+  });
+})();
 </script>
 {% endblock %}
