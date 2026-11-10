@@ -28,7 +28,7 @@
                     </td>
                     <td class="d-none d-sm-table-cell"></td>
                     <td>
-                        <span class="text-success">{% trans "Connected" %}</span>
+                        <span class="dot dot-ok"></span>{% trans "Connected" %}
                     </td>
                     {% if app_settings.VM_DRBD_STATUS == 'True' %}
                         <td class="d-none d-sm-table-cell"></td>
@@ -62,10 +62,10 @@
                             </em>
                         </td>
                         <td>
-                            {% if instance.proxy.instance.info.0 == 1 %}<span class="text-success">{% trans "Active" %}</span>{% endif %}
-                            {% if instance.proxy.instance.info.0 == 5 %}<span class="text-danger">{% trans "Off" %}</span>{% endif %}
+                            {% if instance.proxy.instance.info.0 == 1 %}<span class="dot dot-ok"></span>{% trans "Active" %}{% endif %}
+                            {% if instance.proxy.instance.info.0 == 5 %}<span class="dot dot-off"></span>{% trans "Off" %}{% endif %}
                             {% if instance.proxy.instance.info.0 == 3 %}
-                                <span class="text-warning">{% trans "Suspended" %}</span>
+                                <span class="dot dot-danger"></span>{% trans "Suspended" %}
                             {% endif %}
                         </td>
                         {% if app_settings.VM_DRBD_STATUS == 'True' %}

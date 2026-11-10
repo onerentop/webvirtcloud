@@ -254,3 +254,130 @@ a:focus-visible, button:focus-visible, .btn:focus-visible,
   cursor: pointer; padding: 0 3px; font-size: 13px;
 }
 .copy-btn:hover { color: var(--accent); }
+/* ============================================================
+   WebVirtCloud 原生页面（实例列表 / 计算节点等）
+   只覆盖视觉，不动结构
+   ============================================================ */
+
+/* 表头：去掉全大写（默认主题的 text-transform: uppercase 在中文语境下很吵） */
+.table thead th,
+table thead th {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--ink-3) !important;
+  border-bottom: 1px solid var(--line) !important;
+  padding: 9px 12px !important;
+}
+
+/* 主机分组行：从「灰底+粗黑边框」改成柔和的分组标题 */
+.table tbody tr.table-secondary {
+  background: var(--surface-2) !important;
+}
+.table tbody tr.table-secondary td {
+  border-bottom: 1px solid var(--line) !important;
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+}
+.table tbody tr.table-secondary td,
+.table tbody tr.table-secondary td a {
+  font-weight: 600 !important;
+  color: var(--ink) !important;
+}
+
+/* 普通表格行 */
+.table tbody td {
+  border-bottom: 1px solid var(--line) !important;
+  color: var(--ink);
+}
+.table tbody tr:last-child td { border-bottom: none !important; }
+
+/* 状态颜色统一到主题色 */
+.text-success { color: var(--ok) !important; }
+.text-danger  { color: var(--danger) !important; }
+.text-warning { color: var(--warn) !important; }
+
+/* 进度条收细，去掉条内文字 */
+.progress {
+  height: 5px !important;
+  background: #eef0f3 !important;
+  border-radius: 3px !important;
+}
+.progress-bar {
+  font-size: 0 !important;
+  border-radius: 3px !important;
+}
+.progress-bar.bg-success { background: var(--ok) !important; }
+
+/* 行内操作按钮：灰色实心方块 -> 轻量描边图标按钮 */
+.table .btn-sm.btn-secondary,
+.table .btn.btn-sm.btn-secondary {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink-2) !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.table .btn-sm.btn-secondary:hover:not(.disabled):not([disabled]) {
+  background: var(--surface-2) !important;
+  border-color: var(--ink-3) !important;
+  color: var(--ink) !important;
+}
+.table .btn-sm.btn-secondary.disabled,
+.table .btn-sm.btn-secondary[disabled] {
+  opacity: .35;
+  background: transparent !important;
+}
+.table td .btn + .btn { margin-left: 4px; }
+
+/* 搜索框与新建按钮 */
+#search, input[name="search"], .search-input {
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--line-strong) !important;
+  font-size: 13.5px !important;
+}
+.btn-success {
+  background: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+.btn-success:hover { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; }
+
+/* 实例名链接 */
+.table a.link-primary,
+.table a.link-dark {
+  color: var(--accent) !important;
+  text-decoration: none;
+}
+.table a.link-primary:hover,
+.table a.link-dark:hover { text-decoration: underline; }
+
+/* 徽章 */
+.badge.bg-secondary { background: var(--surface-2) !important; color: var(--ink-2) !important; }
+
+/* 页面顶部的搜索/操作区对齐 */
+.page-header + * { margin-top: 0; }
+/* 表格内的主色/危险色按钮也改轻量描边（计算节点页的操作列） */
+.table .btn-primary {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink-2) !important;
+}
+.table .btn-primary:hover:not(.disabled) {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+.table .btn-danger {
+  background: var(--surface) !important;
+  border: 1px solid #f0cdc9 !important;
+  color: var(--danger) !important;
+}
+.table .btn-danger:hover:not(.disabled) {
+  background: var(--danger-soft) !important;
+  border-color: var(--danger) !important;
+}
+/* 表格内按钮组连成一体时的圆角 */
+.table .btn-group > .btn { border-radius: 6px !important; margin-left: 2px; }
