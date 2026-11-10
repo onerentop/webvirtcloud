@@ -45,6 +45,7 @@ urlpatterns = [
                 path("instances/", views.instances, name="instances"),
                 path("storages/", storages, name="storages"),
                 path("storage/<str:pool>/volumes/", get_volumes, name="volumes"),
+                path("storage/<str:pool>/volumes", get_volumes, name="volumes_noslash"),
                 path("storage/<str:pool>/", storage, name="storage"),
                 path(
                     "storage/<str:pool>/create_volume/",

@@ -327,14 +327,12 @@ class wvmCreate(wvmConnect):
 
         if add_input != "None":
             xml += """<controller type='usb'/>"""
-            if add_input in dom_caps["disk_bus"]:
+            if add_input and add_input not in ("default", "None") and add_input in dom_caps["disk_bus"]:
                 xml += f"""<input type='mouse' bus='{add_input}'/>"""
                 xml += f"""<input type='keyboard' bus='{add_input}'/>"""
                 xml += f"""<input type='tablet' bus='{add_input}'/>"""
-            else:
-                xml += """<input type='mouse'/>"""
-                xml += """<input type='keyboard'/>"""
-                xml += """<input type='tablet'/>"""
+            # else: 不生成 input —— 让 libvirt 自动添加 ps2 设备
+            # （显式写不带 bus 的 input 会被 libvirt 规范化为 bus='default'，导致启动失败）
 
         xml += f"""
                 <graphics type='{graphics}' port='-1' autoport='yes' {console_pass} listen='{listener_addr}'/>

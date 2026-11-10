@@ -196,6 +196,11 @@ class CompatibilityMixIn(object):
         cnx_debug_msg += "- console_socket : '%s'\n" % console_socket
         logging.debug(cnx_debug_msg)
 
+        # PATCH: 容器内访问宿主 VNC —— 把回环/通配地址换成容器可达的宿主网关
+        if console_host in ("0.0.0.0", "127.0.0.1", "::", "::1", ""):
+            console_host = "host.docker.internal"
+            self.msg("Patched console_host -> %s" % console_host)
+
         if console_socket and conntype == CONN_SOCKET:
             # Local socket on local host
             self.msg("Try to open local socket %s" % console_socket)

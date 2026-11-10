@@ -45,14 +45,18 @@ from .models import Flavor
 def index(request):
     instances = None
 
+    # 先同步 libvirt 与数据库，再取带 prefetch 的列表：
+    # 否则本次请求的 prefetch 缓存里还会留着已被删除的实例，
+    # 模板访问它的 libvirt 属性（status/disks 等）会抛 libvirtError 导致 500。
+    for compute in Compute.objects.all():
+        utils.refr(compute)
+
     computes = (
         Compute.objects.all()
         .order_by("name")
         .prefetch_related("instance_set")
         .prefetch_related("instance_set__userinstance_set")
     )
-    for compute in computes:
-        utils.refr(compute)
 
     if request.user.is_superuser or request.user.has_perm("instances.view_instances"):
         instances = Instance.objects.all().prefetch_related("userinstance_set")
@@ -1956,3 +1960,141 @@ def flavor_delete(request, pk):
         "common/confirm_delete.html",
         {"object": flavor},
     )
+
+
+# ============ 一键建机（调用宿主机 vm-create API）============
+import json as _json
+import urllib.request as _urlreq
+
+_VM_API = "http://host.docker.internal:9999"
+_VM_API_SECRET = "vmcreate-2026-local"
+
+
+def server_create(request):
+    result = None
+    vms = []
+    try:
+        with _urlreq.urlopen(_VM_API + "/list", timeout=10) as r:
+            vms = _json.loads(r.read()).get("vms", [])
+    except Exception:
+        pass
+
+    if request.method == "POST":
+        payload = _json.dumps({
+            "name": request.POST.get("name", "").strip(),
+            "cpus": request.POST.get("cpus", "2"),
+            "mem": request.POST.get("mem", "2048"),
+            "disk": request.POST.get("disk", "30"),
+            "password": request.POST.get("password", "").strip(),
+        }).encode()
+        req = _urlreq.Request(
+            _VM_API + "/create", data=payload,
+            headers={"Content-Type": "application/json", "X-Auth": _VM_API_SECRET},
+        )
+        try:
+            with _urlreq.urlopen(req, timeout=310) as r:
+                result = _json.loads(r.read())
+        except Exception as e:
+            result = {"ok": False, "error": str(e)}
+        # 重新拉一次列表
+        try:
+            with _urlreq.urlopen(_VM_API + "/list", timeout=10) as r:
+                vms = _json.loads(r.read()).get("vms", [])
+        except Exception:
+            pass
+
+    # 给每台机器预先算好访问地址
+    for v in vms:
+        oct_ = (v.get("ip") or "").split(".")[-1]
+        if oct_.isdigit():
+            v["oct"] = oct_
+            v["http"] = f"http://vm{oct_}.vm.topren.top"
+            v["ssh"] = f"ssh -p {21000 + int(oct_)} root@103.42.183.217"
+        else:
+            v["oct"] = v["http"] = v["ssh"] = ""
+
+    return render(request, "instances/server_create.html",
+                  {"result": result, "vms": vms, "suggest_name": _suggest_name(vms)})
+
+
+def server_reset_password(request):
+    """重置指定机器的 root 密码"""
+    msg = None
+    ok = False
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        pwd = request.POST.get("password", "").strip()
+        payload = _json.dumps({"name": name, "password": pwd}).encode()
+        req = _urlreq.Request(
+            _VM_API + "/reset-password", data=payload,
+            headers={"Content-Type": "application/json", "X-Auth": _VM_API_SECRET},
+        )
+        try:
+            with _urlreq.urlopen(req, timeout=90) as r:
+                res = _json.loads(r.read())
+                ok = bool(res.get("ok"))
+                msg = res.get("message") or res.get("error") or ("成功" if ok else "失败")
+        except Exception as e:
+            msg = str(e)
+    vms = _fetch_vms()
+    return render(request, "instances/server_create.html",
+                  {"result": {"ok": ok, "name": request.POST.get("name", ""),
+                              "reset_msg": msg, "is_reset": True},
+                   "vms": vms, "suggest_name": _suggest_name(vms)})
+
+
+def _suggest_name(vms):
+    """给建机表单生成一个不与现有机器冲突的默认名字"""
+    import secrets as _secrets
+    taken = {v.get("name") for v in vms}
+    for _ in range(60):
+        cand = "vm-" + _secrets.token_hex(2)
+        if cand not in taken:
+            return cand
+    return "vm-" + _secrets.token_hex(3)
+
+
+def server_delete(request):
+    """批量删除虚拟机（含磁盘与密码库记录）"""
+    deleted, failed, msg = [], {}, ""
+    if request.method == "POST":
+        names = [n.strip() for n in request.POST.getlist("names") if n.strip()]
+        if not names:
+            msg = "没有选中任何机器"
+        else:
+            payload = _json.dumps({"names": names}).encode()
+            req = _urlreq.Request(
+                _VM_API + "/delete", data=payload,
+                headers={"Content-Type": "application/json", "X-Auth": _VM_API_SECRET},
+            )
+            try:
+                with _urlreq.urlopen(req, timeout=600) as r:
+                    res = _json.loads(r.read())
+                deleted = res.get("deleted", [])
+                failed = res.get("errors", {}) or {}
+                msg = res.get("message") or ""
+            except Exception as e:
+                msg = f"删除请求失败: {e}"
+    vms = _fetch_vms()
+    return render(request, "instances/server_create.html",
+                  {"result": {"ok": bool(deleted) and not failed, "deleted": deleted,
+                              "failed": failed, "delete_msg": msg, "is_delete": True},
+                   "vms": vms, "suggest_name": _suggest_name(vms)})
+
+
+def _fetch_vms():
+    vms = []
+    try:
+        with _urlreq.urlopen(_VM_API + "/list", timeout=10) as r:
+            vms = _json.loads(r.read()).get("vms", [])
+    except Exception:
+        pass
+    for v in vms:
+        oct_ = (v.get("ip") or "").split(".")[-1]
+        if oct_.isdigit():
+            v["oct"] = oct_
+            v["http"] = f"http://vm{oct_}.vm.topren.top"
+            v["ssh"] = f"ssh -p {21000 + int(oct_)} root@103.42.183.217"
+        else:
+            v["oct"] = v["http"] = v["ssh"] = ""
+    return vms
