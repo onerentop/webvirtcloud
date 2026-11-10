@@ -12,9 +12,9 @@ services:
     environment:
       - TZ=Asia/Shanghai
       # 面板对外域名（HTTPS 经 HK 的 Caddy 反代进来），供 Django 的 CSRF 校验信任
-      - CSRF_TRUSTED_ORIGINS=https://panel.vm.topren.top:9443
+      - CSRF_TRUSTED_ORIGINS=https://panel.vm.topren.top:9443,https://panel.vm.topren.top
       # noVNC 与控制台同源：浏览器连 wss://<面板域名>:9443/novncd/，由 Caddy 转发到容器 6080
-      - WS_PUBLIC_PORT=9443
+      - WS_PUBLIC_PORT=443
     volumes:
       - webvirtcloud-data:/srv/webvirtcloud/data
       - webvirtcloud-ssh:/var/www/.ssh
