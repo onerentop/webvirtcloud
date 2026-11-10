@@ -56,6 +56,17 @@
             </div>
             <div class="form-text">已自动填好，可直接改</div>
           </div>
+          <div class="col-md-4">
+            <label class="form-label">系统镜像</label>
+            <select class="form-select" name="image" id="vm-image">
+              {% for img in images %}
+                <option value="{{ img.id }}" title="{{ img.note }}">{{ img.label }}</option>
+              {% empty %}
+                <option value="debian12-golden">Debian 12 (预定制模板)</option>
+              {% endfor %}
+            </select>
+            <div class="form-text" id="image-note"></div>
+          </div>
           <div class="col-md-2">
             <label class="form-label">CPU 核数</label>
             <input type="number" class="form-control" name="cpus" value="2" min="1" max="12">
@@ -198,5 +209,16 @@ function deleteSelected() {
   f.submit();
 }
 
+function updateImageNote() {
+  const sel = document.getElementById('vm-image');
+  const el = document.getElementById('image-note');
+  if (!sel || !el) return;
+  const opt = sel.options[sel.selectedIndex];
+  el.textContent = opt ? (opt.getAttribute('title') || '') : '';
+}
+document.addEventListener('DOMContentLoaded', function () {
+  const sel = document.getElementById('vm-image');
+  if (sel) { sel.addEventListener('change', updateImageNote); updateImageNote(); }
+});
 </script>
 {% endblock %}

@@ -1986,6 +1986,7 @@ def server_create(request):
             "mem": request.POST.get("mem", "2048"),
             "disk": request.POST.get("disk", "30"),
             "password": request.POST.get("password", "").strip(),
+            "image": request.POST.get("image", "debian12-golden").strip() or "debian12-golden",
         }).encode()
         req = _urlreq.Request(
             _VM_API + "/create", data=payload,
@@ -2014,7 +2015,8 @@ def server_create(request):
             v["oct"] = v["http"] = v["ssh"] = ""
 
     return render(request, "instances/server_create.html",
-                  {"result": result, "vms": vms, "suggest_name": _suggest_name(vms)})
+                  {"result": result, "vms": vms, "suggest_name": _suggest_name(vms),
+                   "images": _fetch_images()})
 
 
 def server_reset_password(request):
@@ -2040,7 +2042,8 @@ def server_reset_password(request):
     return render(request, "instances/server_create.html",
                   {"result": {"ok": ok, "name": request.POST.get("name", ""),
                               "reset_msg": msg, "is_reset": True},
-                   "vms": vms, "suggest_name": _suggest_name(vms)})
+                   "vms": vms, "suggest_name": _suggest_name(vms),
+                    "images": _fetch_images()})
 
 
 def _suggest_name(vms):
@@ -2079,7 +2082,18 @@ def server_delete(request):
     return render(request, "instances/server_create.html",
                   {"result": {"ok": bool(deleted) and not failed, "deleted": deleted,
                               "failed": failed, "delete_msg": msg, "is_delete": True},
-                   "vms": vms, "suggest_name": _suggest_name(vms)})
+                   "vms": vms, "suggest_name": _suggest_name(vms),
+                    "images": _fetch_images()})
+
+
+def _fetch_images():
+    """从宿主 API 拉取可用的系统镜像清单"""
+    try:
+        req = _urlreq.Request(_VM_API + "/list-images", headers={"X-Auth": _VM_API_SECRET})
+        with _urlreq.urlopen(req, timeout=10) as r:
+            return _json.loads(r.read()).get("images", [])
+    except Exception:
+        return [{"id": "debian12-golden", "label": "Debian 12 (预定制模板)", "note": "默认"}]
 
 
 def _fetch_vms():
