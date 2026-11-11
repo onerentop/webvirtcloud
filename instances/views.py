@@ -2151,10 +2151,22 @@ def server_ports(request):
             except Exception as e:
                 msg = str(e)
     ports, system_ports, pool = _fetch_ports()
+    vms = _fetch_vms()
+
+    # 按服务器分组：每台机器带上它的预置映射与自定义映射
+    groups = []
+    for v in sorted(vms, key=lambda x: x.get("name", "")):
+        name = v.get("name", "")
+        groups.append({
+            "vm": v,
+            "preset": [sp for sp in system_ports if sp["vm"] == name],
+            "custom": [p for p in ports if p["vm"] == name],
+        })
+
     return render(request, "instances/server_ports.html",
                   {"result": ({"ok": ok, "msg": msg} if msg else None),
-                   "ports": ports, "system_ports": system_ports,
-                   "pool": pool, "vms": _fetch_vms(), "scan": scan})
+                   "ports": ports, "system_ports": system_ports, "groups": groups,
+                   "pool": pool, "vms": vms, "scan": scan})
 
 
 def _fetch_images():

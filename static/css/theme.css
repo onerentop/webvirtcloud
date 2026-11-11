@@ -381,3 +381,11 @@ table thead th {
 }
 /* 表格内按钮组连成一体时的圆角 */
 .table .btn-group > .btn { border-radius: 6px !important; margin-left: 2px; }
+/* 端口类型标签 */
+.tag {
+  display: inline-block; font-size: 11px; font-weight: 600;
+  padding: 1px 7px; border-radius: 4px; line-height: 1.6;
+  background: var(--surface-2); color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+.tag-custom { background: var(--accent-soft); color: var(--accent); border-color: #d5ddf7; }
