@@ -124,7 +124,7 @@
           <th style="width:110px">公网端口</th>
           <th style="width:90px">类型</th>
           <th>转发到</th>
-          <th>备注</th>
+          <th>访问方式 / 备注</th>
           <th style="width:170px">创建时间</th>
           <th style="width:80px"></th>
         </tr>
@@ -135,7 +135,7 @@
           <td class="mono">{{ p.public_port }}</td>
           <td><span class="tag">{{ p.kind }}</span></td>
           <td class="mono">{{ p.ip }}:{{ p.guest_port }}</td>
-          <td class="muted">建机时自动生成</td>
+          <td>{% if p.note %}<code>{{ p.note }}</code>{% else %}<span class="muted">建机时自动生成</span>{% endif %}</td>
           <td class="muted">—</td>
           <td></td>
         </tr>
