@@ -2100,17 +2100,32 @@ def _fetch_ports():
         req = _urlreq.Request(_VM_API + "/ports", headers={"X-Auth": _VM_API_SECRET})
         with _urlreq.urlopen(req, timeout=10) as r:
             d = _json.loads(r.read())
-            return d.get("ports", []), d.get("pool", [23000, 23199])
+            return d.get("ports", []), d.get("system_ports", []), d.get("pool", [23000, 23199])
     except Exception:
-        return [], [23000, 23199]
+        return [], [], [23000, 23199]
 
 
 def server_ports(request):
     """自定义端口映射管理"""
-    msg, ok = None, False
+    msg, ok, scan = None, False, None
     if request.method == "POST":
         op = request.POST.get("op", "")
-        if op == "add":
+        if op == "scan":
+            vm_name = request.POST.get("scan_vm", "").strip()
+            if vm_name:
+                req = _urlreq.Request(
+                    _VM_API + "/ports/scan",
+                    data=_json.dumps({"vm": vm_name}).encode(),
+                    headers={"Content-Type": "application/json", "X-Auth": _VM_API_SECRET})
+                try:
+                    with _urlreq.urlopen(req, timeout=45) as r:
+                        scan = _json.loads(r.read())
+                    if not scan.get("ok"):
+                        msg = scan.get("error") or "扫描失败"
+                except Exception as e:
+                    msg = f"扫描请求失败: {e}"
+            payload, url = None, None
+        elif op == "add":
             payload = _json.dumps({
                 "vm": request.POST.get("vm", "").strip(),
                 "guest_port": request.POST.get("guest_port", "").strip(),
@@ -2135,10 +2150,11 @@ def server_ports(request):
                 msg = res.get("output") or res.get("error") or ("操作成功" if ok else "操作失败")
             except Exception as e:
                 msg = str(e)
-    ports, pool = _fetch_ports()
+    ports, system_ports, pool = _fetch_ports()
     return render(request, "instances/server_ports.html",
                   {"result": ({"ok": ok, "msg": msg} if msg else None),
-                   "ports": ports, "pool": pool, "vms": _fetch_vms()})
+                   "ports": ports, "system_ports": system_ports,
+                   "pool": pool, "vms": _fetch_vms(), "scan": scan})
 
 
 def _fetch_images():

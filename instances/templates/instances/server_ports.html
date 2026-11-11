@@ -16,7 +16,8 @@
   <div class="create">
     <form method="post" class="create-form">
       {% csrf_token %}
-      <input type="hidden" name="op" value="add">
+      <input type="hidden" name="op" id="op-field" value="add">
+      <input type="hidden" name="scan_vm" id="scan_vm" value="">
 
       <div class="frow">
         <label for="p-vm">虚拟机</label>
@@ -54,8 +55,11 @@
 
       <div class="frow">
         <label></label>
-        <div>
-          <button type="submit" class="btn-create" style="width:auto;padding:9px 22px">添加映射</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button type="submit" class="btn-create" style="width:auto;padding:9px 22px"
+                  onclick="document.getElementById('op-field').value='add'">添加映射</button>
+          <button type="submit" class="btn-del" style="padding:9px 18px;font-size:13.5px"
+                  onclick="document.getElementById('op-field').value='scan';document.getElementById('scan_vm').value=document.getElementById('p-vm').value">扫描这台机器开放的端口</button>
         </div>
       </div>
     </form>
@@ -75,9 +79,41 @@
     </aside>
   </div>
 
+  {% if scan and scan.ok %}
+  <section class="machines" style="margin-bottom:24px">
+    <header class="machines-head">
+      <h2>扫描结果 <span class="count">{{ scan.vm }}（{{ scan.ip }}）· {{ scan.ports|length }} 个对外开放的端口</span></h2>
+    </header>
+    <table class="machine-table">
+      <thead><tr><th style="width:100px">端口</th><th>进程</th><th style="width:150px"></th></tr></thead>
+      <tbody>
+        {% for p in scan.ports %}
+        <tr>
+          <td class="mono cell-name">{{ p.port }}</td>
+          <td>{% if p.process %}{{ p.process }}{% else %}<span class="muted">—</span>{% endif %}</td>
+          <td>
+            <form method="post" style="margin:0">
+              {% csrf_token %}
+              <input type="hidden" name="op" value="add">
+              <input type="hidden" name="vm" value="{{ scan.vm }}">
+              <input type="hidden" name="guest_port" value="{{ p.port }}">
+              <input type="hidden" name="proto" value="tcp">
+              <input type="hidden" name="note" value="{{ p.process }}">
+              <button type="submit" class="btn-del">映射到公网</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="empty">这台机器目前没有对外开放的监听端口（127.0.0.1 和系统服务已排除）。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
   <section class="machines">
     <header class="machines-head">
-      <h2>映射列表 <span class="count">共 {{ ports|length }} 条</span></h2>
+      <h2>自定义映射 <span class="count">共 {{ ports|length }} 条</span></h2>
     </header>
     <table class="machine-table">
       <thead>
@@ -112,6 +148,29 @@
         </tr>
         {% empty %}
         <tr><td colspan="7" class="empty">还没有自定义端口映射。在左边填一个端口就能加。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="machines" style="margin-top:24px">
+    <header class="machines-head">
+      <h2>系统预置 <span class="count">{{ system_ports|length }} 条 · 建机时自动生成，不可删除</span></h2>
+    </header>
+    <table class="machine-table">
+      <thead>
+        <tr><th style="width:110px">公网端口</th><th>虚拟机</th><th>转发到</th><th style="width:100px">用途</th></tr>
+      </thead>
+      <tbody>
+        {% for p in system_ports %}
+        <tr>
+          <td class="mono">{{ p.public_port }}</td>
+          <td>{{ p.vm }}</td>
+          <td class="mono">{{ p.ip }}:{{ p.guest_port }}</td>
+          <td>{{ p.kind }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="empty">还没有运行中的机器。</td></tr>
         {% endfor %}
       </tbody>
     </table>
