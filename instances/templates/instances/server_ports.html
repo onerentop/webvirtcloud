@@ -58,7 +58,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button type="submit" class="btn-create" style="width:auto;padding:9px 22px"
                   onclick="document.getElementById('op-field').value='add'">添加映射</button>
-          <button type="submit" class="btn-del" style="padding:9px 18px;font-size:13.5px"
+          <button type="submit" formnovalidate class="btn-del" style="padding:9px 18px;font-size:13.5px"
                   onclick="document.getElementById('op-field').value='scan';document.getElementById('scan_vm').value=document.getElementById('p-vm').value">扫描这台机器开放的端口</button>
         </div>
       </div>
